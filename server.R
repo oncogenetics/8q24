@@ -192,21 +192,28 @@ function(input, output) {
     MAP
   })
   
-  output$dataMeta <- renderDataTable({
-    metaRegionClean[ , colnames(metaRegionClean)!= "title", with = FALSE]
+  output$dataMeta <- DT::renderDataTable({
+    datatable(
+      metaRegionClean[ order(BP),
+                       !colnames(metaRegionClean) %in%
+                         c("SNPid","MarkerName","V1", "title", "rn"),
+                       with = FALSE],
+      extensions = 'Buttons', options = list(
+        dom = 'Bfrtip',
+        buttons = list(list(extend = 'csv', filename= '8q24_meta'))
+        ))
   })
   
-  output$dataMetaHits1 <- renderDataTable({
-    metaRegionClean[ SNPid %in% hitsSelectedSNPid(),] 
+  output$dataLDSubset <- DT::renderDataTable({
+    datatable(
+      hitsLDsubset(),
+      extensions = 'Buttons', options = list(
+        dom = 'Bfrtip',
+        buttons = list(list(extend = 'csv', filename= '8q24_LD'))
+      ))
   })
   
-  output$dataMetaHits2 <- renderDataTable({
-    metaRegionClean[ SNPid %in% hitsSelectedSNPid(),] 
-  })
   
-  output$dataLDSubset <- renderDataTable({
-    hitsLDsubset()
-  })
   
   output$dataArcLD <- renderDataTable({
     LD()
@@ -226,31 +233,53 @@ function(input, output) {
       filter(SNP_B %in% hitsType[ hitType == "final12", SNP]) %>% 
       mutate(R2 = round(R2, 2)) %>% 
       select(SNP = SNP_A, SNP_B, R2) %>% 
-      spread(SNP_B, R2)
+      spread(SNP_B, R2, fill = 0)
     
-    x[is.na(x)] <- 0
+    colNamesOrder <- 
+      unique(hitsLDclean[ hitsLDclean$SNP_A %in% hitsType[ hitType == "final12", SNP],
+                          c("SNP_A", "BP_A")]) %>% arrange(BP_A) %>% .$SNP_A
+    rowNamesOrder <-
+        unique(hitsLDclean[ hitsLDclean$SNP_B %in% x$SNP, c("SNP_B", "BP_B")]) %>%
+      arrange(BP_B) %>% .$SNP_B
     
-    # res$col <- as.character(cut(res$R2, seq(0, 1, 0.2),
-    #                             labels = c("#fef0d9","#fdcc8a","#fc8d59","#e34a33","#b30000")))
-    # res$col <- if_else(res$R2 == 0, "white", res$col)
+    rownames(x) <- x$SNP
+    x <- x[ match(rowNamesOrder, x$SNP), colNamesOrder ]
     
-    
+
     # return
-    datatable(x, options = list(pageLength = 100)) %>% 
+    # datatable(x, options = list(pageLength = 100)) %>%
+    #   formatStyle(
+    #     columns = hitsType[ hitType == "final12", SNP],
+    #     #backgroundColor = styleInterval(0.4, c('gray90', 'yellow'))
+    #     backgroundColor = styleInterval(
+    #       cuts = seq(0, 0.8, 0.2),
+    #       values = c("white","#fef0d9","#fdcc8a","#fc8d59","#e34a33","#b30000"))
+    #     )
+    
+    #x <- setNames(x, sprintf('<div style="transform:rotate(-90deg);">%s</div>', names(x)))
+    
+    
+    datatable(x,
+              options = list(
+                pageLength = 100,
+                autoWidth = TRUE,
+                columnDefs = list(list(width = '50px',
+                                       targets = c(1:12)))
+              ),
+              escape = FALSE) %>%
       formatStyle(
-        columns = hitsType[ hitType == "final12", SNP],
-        #backgroundColor = styleInterval(0.4, c('gray90', 'yellow'))
+        columns = 1:12,
         backgroundColor = styleInterval(
           cuts = seq(0, 0.8, 0.2),
           values = c("white","#fef0d9","#fdcc8a","#fc8d59","#e34a33","#b30000"))
-        )
+      )
+
     
     
     })
   
   
-  
-  
+
   
   # Plot: network -------------------------------------------------------------
   output$networkHits <- renderVisNetwork({
