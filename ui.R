@@ -84,14 +84,15 @@ shinyUI(
         tabsetPanel(
           id = "plotTypePanelSelected",
           tabPanel("About",
+                   hr(),
                    # Abstract pudmedID
                    includeMarkdown("README.md")),
           tabPanel("Manhattan",
-                   h4("Manhattan"),
                    hr(),
                    h5("Use mouse to zoom in to 'brush' selection."),
-                   h5("Go to http://www.oncogenetics.icr.ac.uk/LocusExplorer/ for LocusExplorer Manhattan 
-                      plot for this region: chr8_127333841_129040776"),
+                   h5("For enhanced manhattan plot click below link and select region: chr8_127333841_129040776"),
+                   HTML('<a href="http://www.oncogenetics.icr.ac.uk/LocusExplorer/" target="_blank">LocusExplorer</a>'),
+                   hr(),
                    plotOutput("PlotManhattan",
                               click = "plot_click",
                               dblclick = "plot_dblclick",
@@ -105,9 +106,8 @@ shinyUI(
                    hr(),
                    # zoom with brush
                    plotOutput("PlotManhattanZoom")
-                   ),
+          ),
           tabPanel("Network",
-                   h4("Network"),
                    hr(),
                    h5("Choose layout types: 'nicely', 'circle', 'mds' works best;
                       'components' works best to show clusters with tags."),
@@ -116,61 +116,60 @@ shinyUI(
                    visNetworkOutput("networkHits", width = "100%", height = "1000px")
                    ),
           tabPanel("Arc",
-                   h4("Arc"),
                    hr(),
                    h5("Please select exactly 2 methods."),
                    plotOutput("PlotArcLD1", width = 1000, height = 500)
           ),
           tabPanel("LDmatrix",
-                   h4("LD matrix"),
                    hr(),
                    plotOutput("PlotLDmatrix", width = 800, height = 800)
           ),
           tabPanel("LD final12 vs credSet",
-                   h4("LD final12 vs credSet"),
                    hr(),
                    DT::dataTableOutput("LD_dt_12_vs_credSet", width = "300")
           ),
           tabPanel("Data",
-                   h4("Data"),
                    hr(),
                    tabsetPanel(
-                     # Debugging --------------------------------------------------
-                     tabPanel("Shiny Input",
-                              h4("Input"),
-                              hr(),
-                              h4("hitsOnly"),
-                              verbatimTextOutput("I_hitsOnly"),
-                              h4("LD filter"),
-                              verbatimTextOutput("I_filterLD"),
-                              h4("BF filter"),
-                              verbatimTextOutput("I_filterBF"),
-                              h4("xRangeZoomStart"),
-                              verbatimTextOutput("I_xRangeZoomStart"),
-                              h4("xRangeZoomEnd"),
-                              verbatimTextOutput("I_xRangeZoomEnd"),
-                              h4("Selected hits"),
-                              verbatimTextOutput("I_hitsSelected"),
-                              h4("methods"),
-                              verbatimTextOutput("I_methods"),
-                              h4("networkLayout"),
-                              verbatimTextOutput("I_networkLayout")
-                     ),
-                     tabPanel("Nodes",
-                              dataTableOutput("dataNodes")),
-                     tabPanel("Links",
-                              dataTableOutput("dataLinks")),
-                     tabPanel("LD Subset",
+                     # CSV download -------------------------------------------
+                     tabPanel("Meta Data",
+                              dataTableOutput("dataMeta")),
+                     tabPanel("LD Data",
                               dataTableOutput("dataLDSubset")),
-                     tabPanel("LD Arc",
-                              dataTableOutput("dataArcLD")),
-                     tabPanel("MAP",
-                              dataTableOutput("dataMAP")),
-                     tabPanel("Meta",
-                              dataTableOutput("dataMeta"))
+                     tabPanel("MAP SNP IDs",
+                              dataTableOutput("dataMAP"))#,
+                     # # Debugging ----------------------------------------------
+                     # tabPanel("Debug: Shiny",
+                     #          hr(),
+                     #          tabsetPanel(
+                     #            tabPanel("Network: Nodes",
+                     #                     dataTableOutput("dataNodes")),
+                     #            tabPanel("Network: Links",
+                     #                     dataTableOutput("dataLinks")),
+                     #            tabPanel("Arc data",
+                     #                     dataTableOutput("dataArcLD")),
+                     #            tabPanel("Input",
+                     #                     h4("Input"),
+                     #                     hr(),
+                     #                     h4("hitsOnly"),
+                     #                     verbatimTextOutput("I_hitsOnly"),
+                     #                     h4("LD filter"),
+                     #                     verbatimTextOutput("I_filterLD"),
+                     #                     h4("BF filter"),
+                     #                     verbatimTextOutput("I_filterBF"),
+                     #                     h4("xRangeZoomStart"),
+                     #                     verbatimTextOutput("I_xRangeZoomStart"),
+                     #                     h4("xRangeZoomEnd"),
+                     #                     verbatimTextOutput("I_xRangeZoomEnd"),
+                     #                     h4("Selected hits"),
+                     #                     verbatimTextOutput("I_hitsSelected"),
+                     #                     h4("methods"),
+                     #                     verbatimTextOutput("I_methods"),
+                     #                     h4("networkLayout"),
+                     #                     verbatimTextOutput("I_networkLayout"))))
                    )
           )
-      ) # END tabsetPanel
+        ) # END tabsetPanel
       ) # END mainPanel  
     ) # END sidebarLayout(
     
@@ -178,5 +177,5 @@ shinyUI(
     
     
   ) # END fluidPage(
-  ) # END shinyUI(
+) # END shinyUI(
 

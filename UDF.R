@@ -37,7 +37,7 @@ plotLDarc <- function(LD = NULL,
   # Check input data --------------------------------------------------------
   if(is.null(LD)) stop("LD is missing, must have columns: c('BP_A','SNP_A','BP_B','SNP_B','R2')")
   if(!all(c("BP_A","SNP_A","BP_B","SNP_B","R2") %in% colnames(LD))){
-    stop("LD must have columns: c('BP_A','SNP_A','BP_B','SNP_B','R2')") 
+    stop("LD must have columns: c('BP_A','SNP_A','BP_B','SNP_B','R2')")
   } else LD <- as.data.frame(LD)
   
   # upper lower hits
@@ -50,7 +50,7 @@ plotLDarc <- function(LD = NULL,
     statNames <- statNames[1:2]
     warning("statNames length is more than 2, first 2 will be used to label y-axis.")}
   
-  # Data prep ---------------------------------------------------------------  
+  # Data prep ---------------------------------------------------------------
   hits <- unique(c(upper, lower))
   
   # subset on hits and R2 min
@@ -59,7 +59,7 @@ plotLDarc <- function(LD = NULL,
                  LD$SNP_A %in% hits, ]
   
   # add back hits that are not in LD with any other SNP
-  datLD <- 
+  datLD <-
     unique(
       rbind(
         datLD,
@@ -72,7 +72,7 @@ plotLDarc <- function(LD = NULL,
     datLD <- datLD[ datLD$SNP_A %in% hits &
                       datLD$SNP_B %in% hits, ]}
   
-  # round to have less colour 
+  # round to have less colour
   datLD$R2 <- round(datLD$R2, 2)
   
   # Check zoomStart, zoomEnd
@@ -112,7 +112,7 @@ plotLDarc <- function(LD = NULL,
   # Plot --------------------------------------------------------------------
   if(pad) statNames <- strPadLeft(statNames)
   
-  gg_out <- 
+  gg_out <-
     ggplot(plotDat[ plotDat$From != plotDat$To, ],
            aes(x = From, xend = To, y = 0.5, yend = 0.5, col = R2)) +
     geom_segment(aes(x = BP, xend = BP,
@@ -121,22 +121,17 @@ plotLDarc <- function(LD = NULL,
                  data = annotText, inherit.aes = FALSE) +
     geom_curve(curvature = 1, ncp = 1000, lineend = 'butt') +
     geom_hline(yintercept = 0.5, col = "grey60") +
-    scale_x_continuous(name = "Pos") +
-    scale_y_continuous(name = "Method",
-                       limits = c(0, 1),
+    scale_y_continuous(limits = c(0, 1),
                        breaks = c(0.25, 0.75),
                        labels = c(statNames[2], statNames[1])) +
     geom_label_repel(aes(x = BP, y = Y, label = SNP), data = annotText,
                      inherit.aes = FALSE) +
     scale_color_gradient2(low = "grey90", mid = "yellow", high = "red",
                           limits = c(0, 1), midpoint = 0.5) +
-    theme_classic() #+
-    #theme(
-      #axis.text.x = element_blank(),
-      #axis.ticks.x = element_blank(),
-      # axis.title.x = "Pos",
-      # axis.title.y = "Method")
-    
+    theme_classic() +
+    theme(axis.text.x = element_blank(),
+          axis.ticks.x = element_blank(),
+          axis.title = element_blank())
   
   #Zoom
   gg_out <- gg_out + coord_cartesian(xlim = xRange)

@@ -188,8 +188,13 @@ function(input, output) {
   
   # Data ----------------------------------------------------------------------
   
-  output$dataMAP <- renderDataTable({
-    MAP
+  output$dataMAP <- DT::renderDataTable({
+    datatable(MAP,
+              extensions = 'Buttons', options = list(
+                dom = 'Bfrtip',
+                buttons = list(list(extend = 'csv', filename= '8q24_meta'))
+              )
+              )
   })
   
   output$dataMeta <- DT::renderDataTable({
@@ -260,12 +265,15 @@ function(input, output) {
     
     
     datatable(x,
+              extensions = 'Buttons',
               options = list(
                 pageLength = 100,
-                autoWidth = TRUE,
-                columnDefs = list(list(width = '50px',
-                                       targets = c(1:12)))
+                dom = 'Bfrtip',
+                buttons = list(list(extend = 'csv', filename= '8q24_LD_hits_vs_other'))
               ),
+              #autoWidth = TRUE,
+              #columnDefs = list(list(width = '50px',
+              #                       targets = c(1:12)))
               escape = FALSE) %>%
       formatStyle(
         columns = 1:12,
@@ -304,7 +312,7 @@ function(input, output) {
     
     
     
-    oncofunco::plotLDarc(plotDat,
+    plotLDarc(plotDat,
               statNames = statNameSelected,
               upper = hitsType[hitType == statNameSelected[1], SNP],
               lower = hitsType[hitType == statNameSelected[2], SNP],
