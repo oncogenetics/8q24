@@ -11,7 +11,7 @@ library(DT)
 set.seed(12)
 
 # Data prep ---------------------------------------------------------------
-load("20171111.RData")
+load("Data/20171111.RData")
 setDT(hitsLD)
 
 hitsType <- merge(hitsType, MAP[ , list(rsid, BP)], by.x = "oncoID", by.y = "rsid")
