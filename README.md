@@ -17,6 +17,11 @@ Chromosome 8q24 is a susceptibility locus for multiple cancers, including prosta
 <sup>++</sup> These are joint senior authors    
 <sup>x</sup> Corresponding author    
 
+----------------
+
+### Links
+ - [Nature Communications: volume 9, Article number: 4616 (2018)](https://www.nature.com/articles/s41467-018-06863-1)   
+ - [PMID:30397198](https://www.ncbi.nlm.nih.gov/pubmed/30397198)
 
 ----------------
 
@@ -28,12 +33,6 @@ Open RStudio (start a new R session) copy the following code into the console an
 library(shiny)  
 runGitHub("8q24", "oncogenetics", launch.browser = TRUE)
 ```
-
-----------------
-
-[Nature Communicationsvolume 9, Article number: 4616 (2018)](https://www.nature.com/articles/s41467-018-06863-1)   
-[PMID:30397198](https://www.ncbi.nlm.nih.gov/pubmed/30397198)
-
 ----------------
 
 ### To-do
