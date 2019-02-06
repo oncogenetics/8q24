@@ -31,9 +31,8 @@ runGitHub("8q24", "oncogenetics", launch.browser = TRUE)
 
 ----------------
 
-! To be updated with PMID hyperlink !    
-[Journal link XXX](https://www.nature.com/ncomms/)   
-[PMID: XXX](http://www.ncbi.nlm.nih.gov/pubmed/XXX)
+[Nature Communicationsvolume 9, Article number: 4616 (2018)](https://www.nature.com/articles/s41467-018-06863-1)   
+[PMID:30397198](https://www.ncbi.nlm.nih.gov/pubmed/30397198)
 
 ----------------
 
