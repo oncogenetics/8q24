@@ -25,7 +25,7 @@ tweaks <-
 shinyUI(
   #navbarPage(
   fluidPage(
-    titlePanel("8q24 v0.1"),
+    titlePanel("8q24 v0.2"),
     sidebarLayout(
       sidebarPanel(
         tweaks,
@@ -126,18 +126,18 @@ shinyUI(
           ),
           tabPanel("LD final12 vs credSet",
                    hr(),
-                   DT::dataTableOutput("LD_dt_12_vs_credSet", width = "300")
+                   DTOutput("LD_dt_12_vs_credSet", width = "300")
           ),
           tabPanel("Data",
                    hr(),
                    tabsetPanel(
                      # CSV download -------------------------------------------
                      tabPanel("Meta Data",
-                              dataTableOutput("dataMeta")),
+                              DTOutput("dataMeta")),
                      tabPanel("LD Data",
-                              dataTableOutput("dataLDSubset")),
+                              DTOutput("dataLDSubset")),
                      tabPanel("MAP SNP IDs",
-                              dataTableOutput("dataMAP"))#,
+                              DTOutput("dataMAP"))#,
                      # # Debugging ----------------------------------------------
                      # tabPanel("Debug: Shiny",
                      #          hr(),

@@ -20,8 +20,8 @@ Chromosome 8q24 is a susceptibility locus for multiple cancers, including prosta
 ----------------
 
 ### Links
- - [Nature Communications: volume 9, Article number: 4616 (2018)](https://www.nature.com/articles/s41467-018-06863-1)   
- - [PMID:30397198](https://www.ncbi.nlm.nih.gov/pubmed/30397198)
+ - <a href="https://www.nature.com/articles/s41467-018-06863-1" target="_blank">Nature Communications: volume 9, Article number: 4616 (2018)</a>   
+ - <a href="https://www.ncbi.nlm.nih.gov/pubmed/30397198" target="_blank">PMID: 30397198</a>
 
 ----------------
 

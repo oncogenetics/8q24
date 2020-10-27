@@ -13,19 +13,16 @@ function(input, output) {
   Yrange <- reactive({c(0, round(max(-log10(metaRegionClean$P)), -1) + 10)})
   
   hitsLDsubset <- reactive({
-    hitsLDclean %>% 
-      filter(
-        (R2 > input$filterMinLD |
-           SNP_A %in% hitsSelected() |
-           SNP_B %in% hitsSelected()) &
-          BP_A >= zoomStart() &
-          BP_A <= zoomEnd() &
-          BP_B >= zoomStart() &
-          BP_B <= zoomEnd()) %>% 
-      # filter on BF
-      filter(
-        SNP_A %in% metaRegionClean[ MeanBF > input$filterMinBF, SNP] &
-          SNP_B %in% metaRegionClean[ MeanBF > input$filterMinBF, SNP])  
+    hitsLDclean[ (R2 > input$filterMinLD |
+                    SNP_A %in% hitsSelected() |
+                    SNP_B %in% hitsSelected()) &
+                   BP_A >= zoomStart() &
+                   BP_A <= zoomEnd() &
+                   BP_B >= zoomStart() &
+                   BP_B <= zoomEnd(), 
+                 ][# filter on BF
+                   SNP_A %in% metaRegionClean[ MeanBF > input$filterMinBF, SNP] &
+                     SNP_B %in% metaRegionClean[ MeanBF > input$filterMinBF, SNP], ]  
   })
   
   # Dynamic UI --------------------------------------------------------------
@@ -33,129 +30,89 @@ function(input, output) {
     renderUI({
       list(tags$div(align = 'left', 
                     class = 'multicol', 
-      checkboxGroupInput("hits", h5("Hits:"),
-                         choices = sort(
-                           unique(
-                             hitsType[ hitType %in%
-                                       methodsSelected() &
-                                       # filter on BF
-                                       SNP %in% metaRegionClean[ MaxBF > input$filterMinBF, SNP],
-                                     SNP])),
-                         selected = unique(hitsType[ hitType %in%
-                                                            methodsSelected() &
-                                                            BP >= zoomStart() &
-                                                            BP <= zoomEnd(),
-                                                          SNP]))
+                    checkboxGroupInput("hits", h5("Hits:"),
+                                       choices = sort(
+                                         unique(
+                                           hitsType[ hitType %in%
+                                                       methodsSelected() &
+                                                       # filter on BF
+                                                       SNP %in% metaRegionClean[ MaxBF > input$filterMinBF, SNP],
+                                                     SNP])),
+                                       selected = unique(hitsType[ hitType %in%
+                                                                     methodsSelected() &
+                                                                     BP >= zoomStart() &
+                                                                     BP <= zoomEnd(),
+                                                                   SNP]))
       ))
-      })
+    })
   # Network: nodes and links --------------------------------------------------
   # 1. Nodes ------------------------------------------------------------------
   nodes <- reactive({
-    nodeHits <- 
-      hitsType %>% 
-      filter(hitType %in% input$methods) %>% 
-      arrange(hitType) %>%
-      transmute(
-        SNPid,
-        id = SNP,
-        label = SNP,
-        hitType = hitType) %>%
-      group_by(SNPid, id, label) %>%
-      summarise(group = paste(hitType, collapse = ",")) %>% 
-      ungroup()
+    nodeHits <- hitsType[ hitType %in% input$methods, 
+                          ][ order(hitType), .(SNPid, id = SNP, label = SNP,
+                                               hitType = hitType)]
+    nodeHits[, group := paste(hitType, collapse = ","),
+             by = .(SNPid, id, label) ]
     
-    nodeTags <- 
-      rbind.data.frame(
-        hitsLDsubset() %>% 
-          transmute(
-            SNPid = SNPid_A,
-            id = SNP_A,
-            label = SNP_A,
-            group = "tag"),
-        hitsLDsubset() %>% 
-          transmute(
-            SNPid = SNPid_B,
-            id = SNP_B,
-            label = SNP_B,
-            group = "tag")) %>% 
-      filter(!(id %in% nodeHits$id)) %>% 
-      unique %>% 
-      filter(
-        # filter on BF
-        id %in% metaRegionClean[ MaxBF > input$filterMinBF, SNP]
-      )
+    nodeTags <- unique(
+      rbind(
+        hitsLDsubset()[, .( SNPid = SNPid_A, id = SNP_A, 
+                            label = SNP_A, hitType = NA, group = "tag") ],
+        hitsLDsubset()[, .( SNPid = SNPid_B, id = SNP_B,
+                            label = SNP_B, hitType = NA, group = "tag") ]
+        )[ !(id %in% nodeHits$id), ]
+      )[ id %in% metaRegionClean[ MaxBF > input$filterMinBF, SNP], ]
     
     #merge hit nodes and other tag nodes
     if(nrow(nodeTags) > 0) {
-      res <- rbind.data.frame(nodeHits, nodeTags)} else {
+      res <- rbind(nodeHits, nodeTags)} else {
         res <- nodeHits}
     
     #keep only hits?
     if(input$hitsOnly){
-      res <- res %>%
-        filter(id %in% hitsSelected())
+      res <- res[ id %in% hitsSelected(), ]
     } 
     
     # remove nodes that have no links
-    res <- res %>%
-      filter(id %in% hitsSelected() |
-               id %in% c(links()$from, links()$to))
+    res <- res[ id %in% hitsSelected() |
+                  id %in% c(links()$from, links()$to), ]
     
     #add meta info: pvalue, infoscore, allele, maf
     res <- merge(res,
-                 metaRegionClean[, list(SNPid, MaxBF, title)],
+                 metaRegionClean[, .(SNPid, MaxBF, title)],
                  by = "SNPid", all.x = TRUE)
     
     # set the size of nodes
     if(input$nodeSizeBF){
-      res <- res %>% 
-        mutate(size = as.numeric(
-          as.character(cut(MaxBF,
-                           breaks = c(-1, 0, 1,  3,  5, 10, 100, Inf),
-                           labels =    c(1, 4, 10, 12, 15, 20, 25)))))
-      #return
-      res %>%
-        arrange(group) %>% 
-        select(id, label, group, size, title) %>% unique
+      res[, size := as.numeric(
+        as.character(cut(MaxBF,
+                         breaks = c(-1, 0, 1,  3,  5, 10, 100, Inf),
+                         labels = c(1, 4, 10, 12, 15, 20, 25)))) ]
+      res <- res[ order(group), .(id, label, group, size, title), ]
     } else {
-      #return
-      res %>%
-        arrange(group) %>% 
-        select(id, label, group, title) %>% unique
-        
+      res <- res[ order(group), .(id, label, group, title) ]
       }
-  
+    #return
+    unique(res)
   })
   
   # 2. Links ---------------------------------------------------------------------
   links <- reactive({
     if(input$hitsOnly){
-      res <-
-        hitsLDsubset() %>%
-        transmute(from = SNP_A,
-                  to = SNP_B,
-                  value = R2)%>%
-        filter(from != to) %>%
-        filter(from %in% hitsSelected() &
-                 to %in% hitsSelected())
-    } else {
-      res <-
-        hitsLDsubset() %>%
-        transmute(from = SNP_A,
-                  to = SNP_B,
-                  value = R2) %>%
-        filter(from != to &
-                 from %in% hitsSelected())
-    }
+      res <- hitsLDsubset()[, .(from = SNP_A, to = SNP_B, value = R2)
+                            ][ from != to, 
+                               ][from %in% hitsSelected() & 
+                                   to %in% hitsSelected(), ]
+      } else {
+        res <- hitsLDsubset()[, .(from = SNP_A, to = SNP_B, value = R2) 
+                              ][from != to &
+                                  from %in% hitsSelected(), ]
+      }
+    res[, color := "lightblue" ]
+    res[, title := paste0("R2:", round(value, 2)) ]
     
-    #res$color <- if_else(res$value < 0.1, "gray", "lightblue")
-    res$color <- "lightblue"
-    #res$value <- round(res$value, 2) * 100
-    res$title <- paste0("R2:", round(res$value, 2))
-    
-    res %>%
-      filter(value >= input$filterMinLD)
-    
+    #return
+    res[ value >= input$filterMinLD, ]
   })
   
   # Arc plots -----------------------------------------------------------------
@@ -163,17 +120,11 @@ function(input, output) {
   LD <- reactive({
     # data for plotLDarc(), merge to MAP twice to get BP, SNP_A is hits
     # c("BP_A","SNP_A","BP_B","SNP_B","R2")
-    res <- merge(
-      merge(hitsLD[ hitsLD$R2 > input$filterMinLD, ],
-            MAP[ , list(SNPid, rsid, BP)], by.x = "SNP", by.y = "SNPid"),
-      MAP[ , list(SNPid, rsid, BP)], by.x = "SNP_hit", by.y = "SNPid") %>%
-      transmute(BP_A = BP.y,
-                SNP_A = SNP_hit,
-                BP_B = BP.x,
-                SNP_B = SNP,
-                R2)
-    #return
-    res
+    merge(
+      merge(hitsLD[ R2 > input$filterMinLD, ],
+            MAP[ , .(SNPid, rsid, BP)], by.x = "SNP", by.y = "SNPid"),
+      MAP[ , .(SNPid, rsid, BP)], by.x = "SNP_hit", by.y = "SNPid"
+    )[, .(BP_A = BP.y, SNP_A = SNP_hit, BP_B = BP.x, SNP_B = SNP, R2)]
   })
   
   # Input -------------------------------------------------------------------
@@ -187,108 +138,47 @@ function(input, output) {
   output$I_networkLayout <- renderPrint({ input$networkLayout })
   
   # Data ----------------------------------------------------------------------
+  output$dataMAP <- renderDT({datatable(MAP)})
   
-  output$dataMAP <- DT::renderDataTable({
-    datatable(MAP,
-              extensions = 'Buttons', options = list(
-                dom = 'Bfrtip',
-                buttons = list(list(extend = 'csv', filename= '8q24_meta'))
-              )
-              )
-  })
+  output$dataMeta <- renderDT({
+    x <- setdiff(colnames(metaRegionClean), 
+                 c("SNPid","MarkerName","V1", "title", "rn"))
+    datatable( metaRegionClean[ order(BP), ..x ] )
+    })
   
-  output$dataMeta <- DT::renderDataTable({
-    datatable(
-      metaRegionClean[ order(BP),
-                       !colnames(metaRegionClean) %in%
-                         c("SNPid","MarkerName","V1", "title", "rn"),
-                       with = FALSE],
-      extensions = 'Buttons', options = list(
-        dom = 'Bfrtip',
-        buttons = list(list(extend = 'csv', filename= '8q24_meta'))
-        ))
-  })
-  
-  output$dataLDSubset <- DT::renderDataTable({
-    datatable(
-      hitsLDsubset(),
-      extensions = 'Buttons', options = list(
-        dom = 'Bfrtip',
-        buttons = list(list(extend = 'csv', filename= '8q24_LD'))
-      ))
-  })
-  
-  
-  
-  output$dataArcLD <- renderDataTable({
-    LD()
-    
-  })
-  output$dataNodes <- renderDataTable({
-    nodes()
-  })
-  
-  output$dataLinks <- renderDataTable({
-    links()
-  })
+  output$dataLDSubset <- renderDT({ datatable(hitsLDsubset()) })
+
+  output$dataArcLD <- renderDataTable({ LD() })
+  output$dataNodes <- renderDataTable({ nodes() })
+  output$dataLinks <- renderDataTable({ links() })
   
   # LD Datatable, hits vs credSet -------------------------------------------
-  output$LD_dt_12_vs_credSet <- DT::renderDataTable({
-    x <- hitsLDclean %>% 
-      filter(SNP_B %in% hitsType[ hitType == "final12", SNP]) %>% 
-      mutate(R2 = round(R2, 2)) %>% 
-      select(SNP = SNP_A, SNP_B, R2) %>% 
-      spread(SNP_B, R2, fill = 0)
-    
-    colNamesOrder <- 
-      unique(hitsLDclean[ hitsLDclean$SNP_A %in% hitsType[ hitType == "final12", SNP],
-                          c("SNP_A", "BP_A")]) %>% arrange(BP_A) %>% .$SNP_A
-    rowNamesOrder <-
-        unique(hitsLDclean[ hitsLDclean$SNP_B %in% x$SNP, c("SNP_B", "BP_B")]) %>%
-      arrange(BP_B) %>% .$SNP_B
-    
+  output$LD_dt_12_vs_credSet <- renderDT({
+    x <- copy(hitsLDclean)
+    x <- x[ (SNP_B %in% hitsType[ hitType == "final12", SNP]), 
+       ][, .(SNP = SNP_A, SNP_B, R2 = round(R2, 2)) 
+         ][, dcast(.SD, SNP ~ SNP_B, fill = 0, value.var = "R2" )] 
+
+    colNamesOrder <- unique(
+        hitsLDclean[ SNP_A %in% hitsType[ hitType == "final12", SNP], 
+                     ][order(BP_A) , SNP_A ])
+    rowNamesOrder <- unique(
+      hitsLDclean[ SNP_B %in% x$SNP, .(SNP_B, BP_B)
+                   ][order(BP_B), SNP_B])
+    setDF(x)
     rownames(x) <- x$SNP
     x <- x[ match(rowNamesOrder, x$SNP), colNamesOrder ]
     
-
-    # return
-    # datatable(x, options = list(pageLength = 100)) %>%
-    #   formatStyle(
-    #     columns = hitsType[ hitType == "final12", SNP],
-    #     #backgroundColor = styleInterval(0.4, c('gray90', 'yellow'))
-    #     backgroundColor = styleInterval(
-    #       cuts = seq(0, 0.8, 0.2),
-    #       values = c("white","#fef0d9","#fdcc8a","#fc8d59","#e34a33","#b30000"))
-    #     )
-    
-    #x <- setNames(x, sprintf('<div style="transform:rotate(-90deg);">%s</div>', names(x)))
-    
-    
-    datatable(x,
-              extensions = 'Buttons',
-              options = list(
-                pageLength = 100,
-                dom = 'Bfrtip',
-                buttons = list(list(extend = 'csv', filename= '8q24_LD_hits_vs_other'))
-              ),
-              #autoWidth = TRUE,
-              #columnDefs = list(list(width = '50px',
-              #                       targets = c(1:12)))
+    datatable(x, 
+              options = list(pageLength = 100),
               escape = FALSE) %>%
       formatStyle(
         columns = 1:12,
         backgroundColor = styleInterval(
           cuts = seq(0, 0.8, 0.2),
-          values = c("white","#fef0d9","#fdcc8a","#fc8d59","#e34a33","#b30000"))
-      )
+          values = c("white","#fef0d9","#fdcc8a","#fc8d59","#e34a33","#b30000")))
+  })
 
-    
-    
-    })
-  
-  
-
-  
   # Plot: network -------------------------------------------------------------
   output$networkHits <- renderVisNetwork({
     visNetwork(nodes(), links()) %>%
@@ -305,13 +195,9 @@ function(input, output) {
       input$methods[1],
       ifelse(is.na(input$methods[2]), input$methods[1], input$methods[2]))
     
-    plotDat <- hitsLDclean %>% filter(BP_A >= Xrange()[1] &
-                                        BP_A <= Xrange()[2] &
-                                        BP_B >= Xrange()[1] &
-                                        BP_B <= Xrange()[2] )
-    
-    
-    
+    plotDat <- hitsLDclean[ (BP_A >= Xrange()[1] & BP_A <= Xrange()[2] &
+                               BP_B >= Xrange()[1] & BP_B <= Xrange()[2]), ]
+
     plotLDarc(plotDat,
               statNames = statNameSelected,
               upper = hitsType[hitType == statNameSelected[1], SNP],
@@ -328,25 +214,21 @@ function(input, output) {
   
   # Plot: manhattan ---------------------------------------------------------
   output$PlotManhattan <- renderPlot({
-    plotDat <- metaRegionClean %>% 
-      filter(BP >= zoomStart() &
-               BP <= zoomEnd()) %>% 
-      mutate(
-        Pos = BP,
-        PLog10 = -log10(`P-value`),
-        col = if_else(SNP %in% hitsSelected(), "red", "grey"),
-        label = if_else(SNP %in% hitsSelected(), SNP, NA_character_)
-      )
-    
-    ggplot(plotDat, aes(Pos, PLog10, col = col, label = label)) +
+    x <- copy(metaRegionClean)
+    x <- x[ BP >= zoomStart() & BP <= zoomEnd(), ]
+    x[, Pos := BP ]
+    x[, PLog10 := -log10(`P-value`) ]
+    x[, col := ifelse(SNP %in% hitsSelected(), "red", "grey") ]
+    x[, label := ifelse(SNP %in% hitsSelected(), SNP, NA_character_) ]
+
+    ggplot(x, aes(Pos, PLog10, col = col, label = label)) +
       geom_point(size = 4, alpha = 0.5) +
       geom_text_repel(col = "black", na.rm = TRUE) +
       scale_colour_identity() + 
       coord_cartesian(xlim = Xrange(), ylim = Yrange()) +
       theme_minimal()
   })
-  #oncofunco::plotManhattan()
-  
+
   output$PlotManhattanText <- renderText({
     xy_str <- function(e) {
       if(is.null(e)) return("NULL\n")
@@ -357,7 +239,6 @@ function(input, output) {
       paste0("xmin=", round(e$xmin, 1), " xmax=", round(e$xmax, 1), 
              " ymin=", round(e$ymin, 1), " ymax=", round(e$ymax, 1))
     }
-    
     paste0(
       "click: ", xy_str(input$plot_click),
       "dblclick: ", xy_str(input$plot_dblclick),
@@ -380,20 +261,16 @@ function(input, output) {
       yRangeHover <- c(input$plot_brush$ymin, input$plot_brush$ymax)  
     }
     
-    plotDat <- metaRegionClean %>% 
-      filter(BP >=  xRangeHover[1] &
-               BP <= xRangeHover[2]) %>% 
-      mutate(
-        Pos = BP,
-        PLog10 = -log10(`P-value`),
-        col = if_else(SNP %in% hitsSelected(), "red", "grey"),
-        label = if_else(SNP %in% hitsSelected(), SNP, NA_character_)
-      ) %>% 
-      filter( PLog10 >= yRangeHover[1] &
-                PLog10 <= yRangeHover[2])
+    x <- copy(metaRegionClean)
     
-    #plot(plotDat$Pos, plotDat$PLog10)
-    ggplot(plotDat, aes(Pos, PLog10, col = col, label = label)) +
+    x <- x[ BP >=  xRangeHover[1] & BP <= xRangeHover[2], ]
+    x[, Pos := BP ]
+    x[, PLog10 := -log10(`P-value`) ]
+    x[, col := ifelse(SNP %in% hitsSelected(), "red", "grey") ]
+    x[, label := ifelse(SNP %in% hitsSelected(), SNP, NA_character_) ]
+    x <- x[ PLog10 >= yRangeHover[1] & PLog10 <= yRangeHover[2], ]
+    
+    ggplot(x, aes(Pos, PLog10, col = col, label = label)) +
       geom_point(size = 4, alpha = 0.5) +
       geom_text_repel(col = "black", na.rm = TRUE) +
       scale_colour_identity() + 
@@ -403,34 +280,25 @@ function(input, output) {
   
   # Plot: LD Matrix ---------------------------------------------------------  
   output$PlotLDmatrix <- renderPlot({
-    d <- hitsLDclean %>% 
-      filter(SNP_A %in% hitsSelected() &
-               SNP_B %in% hitsSelected())
-    
+    d <- hitsLDclean[ SNP_A %in% hitsSelected() & SNP_B %in% hitsSelected(), ]
     # get all combo
     x <- data.frame(expand.grid(unique(c(d$SNP_A, d$SNP_B)),
                                 unique(c(d$SNP_A, d$SNP_B))))
     colnames(x) <- c("SNP_A", "SNP_B")
-
-
-
-
     # add R2
-    x <- merge(x, d[, c("SNP_A", "SNP_B", "R2")], by = c("SNP_A", "SNP_B"), all.x = TRUE)
+    x <- merge(x, d[, .(SNP_A, SNP_B, R2)], by = c("SNP_A", "SNP_B"), all.x = TRUE)
     x[ is.na(x) ] <- 0
     
     # add pos for SNP_A and SNP_B
     res <- x
-    d_bp <- merge(res, unique(hitsType[ , list(SNP_A = SNP, BP_A = BP)]), by = "SNP_A")
-    d_bp <- merge(d_bp, unique(hitsType[ , list(SNP_B = SNP, BP_B = BP)]), by = "SNP_B")
+    d_bp <- merge(res, unique(hitsType[ , .(SNP_A = SNP, BP_A = BP)]), by = "SNP_A")
+    d_bp <- merge(d_bp, unique(hitsType[ , .(SNP_B = SNP, BP_B = BP)]), by = "SNP_B")
     
     # order SNPs by pos - as factor levels
-    SNPorder <- 
-      unique(
-        rbind(
-          data_frame(SNP = d_bp$SNP_A, BP = d_bp$BP_A),
-          data_frame(SNP = d_bp$SNP_B, BP = d_bp$BP_B)) 
-      ) %>% arrange(BP) %>% .$SNP
+    SNPorder <- unique(
+      rbind(data.frame(SNP = d_bp$SNP_A, BP = d_bp$BP_A),
+            data.frame(SNP = d_bp$SNP_B, BP = d_bp$BP_B)))
+    SNPorder <- SNPorder[ order(SNPorder$B), "SNP" ]
     
     res$SNP_A <- factor(res$SNP_A, levels = SNPorder)
     res$SNP_B <- factor(res$SNP_B, levels = SNPorder)
@@ -439,7 +307,7 @@ function(input, output) {
     #res$col <- as.character(cut(res$R2, seq(0, 1, 0.2), labels = grey.colors(5, 0.9, 0)))
     res$col <- as.character(cut(res$R2, seq(0, 1, 0.2),
                                 labels = c("#fef0d9","#fdcc8a","#fc8d59","#e34a33","#b30000")))
-    res$col <- if_else(res$R2 == 0, "white", res$col)
+    res$col <- ifelse(res$R2 == 0, "white", res$col)
     
     # output plot tile
     ggplot(res, aes(SNP_A, SNP_B, fill = col, col = "grey90")) +
