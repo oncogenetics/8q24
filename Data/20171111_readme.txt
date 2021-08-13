@@ -1,0 +1,1 @@
+/data/rds/DGE/DUDGE/OGENETIC/Project/OncoArray_Finemap/OncoArray/RegionOfInterest/8q24/LD_compareMethods/01_subsetFullData.R
