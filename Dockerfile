@@ -7,6 +7,9 @@
 # docker run -p 3838:3838 --rm --name icr-8q24 icrsc/icr-8q24
 #
 # Should then be visible on http://localhost:3838/
+#
+# PUSH IMAGE
+# docker push icrsc/icr-8q24
 ####################################################
 
 FROM rocker/r-ver:4.3.2
